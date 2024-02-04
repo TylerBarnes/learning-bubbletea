@@ -17,7 +17,7 @@ type model struct {
 	Choices     []string
 	Cursor      int
 	Selected    map[int]struct{}
-	CurrentView string
+	currentView string
 	textInput   textinput.Model
 }
 
@@ -57,9 +57,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if m.CurrentView == "list" {
+	if m.currentView == "list" {
 		updateList(&m, msg)
-	} else if m.CurrentView == "add" {
+	} else if m.currentView == "add" {
 		updateAdd(&m, msg)
 		m.textInput, cmd = m.textInput.Update(msg)
 		return m, cmd
@@ -71,8 +71,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	db.Put([]byte("model"), modelJSON, nil)
 
-	if m.CurrentView == "" {
-		m.CurrentView = "list"
+	if m.currentView == "" {
+		m.currentView = "list"
 	}
 
 	return m, nil
@@ -84,18 +84,18 @@ func updateAdd(m *model, msg tea.Msg) tea.Model {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "tab":
-			m.CurrentView = "list"
-			return m
 		case "enter":
 			m.Choices = append(m.Choices, m.textInput.Value())
 			m.textInput.Reset()
 			// move cursor to last element (newly added choice)
 			m.Cursor = len(m.Choices) - 1
-			m.CurrentView = "list"
+			m.currentView = "list"
 			return m
 		case "esc":
 			m.textInput.Reset()
+			m.currentView = "list"
+			return m
+
 		}
 	}
 
@@ -106,8 +106,8 @@ func updateList(m *model, msg tea.Msg) tea.Model {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "tab":
-			m.CurrentView = "add"
+		case "a":
+			m.currentView = "add"
 			return m
 		case "k":
 			if m.Cursor > 0 {
@@ -174,7 +174,7 @@ func addView(m model) string {
 }
 
 func (m model) View() string {
-	switch m.CurrentView {
+	switch m.currentView {
 	case "add":
 		return addView(m)
 	case "list":
@@ -202,13 +202,14 @@ func initialModel() model {
 			panic(err)
 		}
 		restoredModel.textInput = ti
+		restoredModel.currentView = "list"
 		return *restoredModel
 	}
 
 	return model{
 		Choices:     []string{"Do a thing", "do another thing"},
 		Selected:    make(map[int]struct{}),
-		CurrentView: "list",
+		currentView: "list",
 		textInput:   ti,
 	}
 }
