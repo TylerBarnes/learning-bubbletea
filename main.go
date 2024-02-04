@@ -88,11 +88,14 @@ func updateAdd(m *model, msg tea.Msg) tea.Model {
 			m.CurrentView = "list"
 			return m
 		case "enter":
-			m.Choices = append([]string{m.textInput.Value()}, m.Choices...)
+			m.Choices = append(m.Choices, m.textInput.Value())
 			m.textInput.Reset()
-			m.Cursor = 0
+			// move cursor to last element (newly added choice)
+			m.Cursor = len(m.Choices) - 1
 			m.CurrentView = "list"
 			return m
+		case "esc":
+			m.textInput.Reset()
 		}
 	}
 
@@ -118,6 +121,14 @@ func updateList(m *model, msg tea.Msg) tea.Model {
 			} else {
 				m.Cursor = 0
 			}
+		case "d":
+			// remove selected choice from choices slice
+			m.Choices = append(m.Choices[:m.Cursor], m.Choices[m.Cursor+1:]...)
+			// move the cursor up once if it would dissapear
+			if m.Cursor == len(m.Choices) {
+				m.Cursor--
+			}
+			delete(m.Selected, m.Cursor)
 		case "enter", " ":
 			_, ok := m.Selected[m.Cursor]
 			if ok {
