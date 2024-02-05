@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/lotusdblabs/lotusdb/v2"
 )
@@ -65,6 +67,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
+	if len(m.Choices) < 1 {
+		m.currentView = "add"
+	}
+
 	modelJSON, err := m.toJSON()
 	if err != nil {
 		panic(err)
@@ -87,6 +93,7 @@ func updateAdd(m *model, msg tea.Msg) tea.Model {
 		case "enter":
 			m.Choices = append(m.Choices, m.textInput.Value())
 			m.textInput.Reset()
+			delete(m.Selected, m.Cursor+1)
 			// move cursor to last element (newly added choice)
 			m.Cursor = len(m.Choices) - 1
 			m.currentView = "list"
@@ -122,13 +129,17 @@ func updateList(m *model, msg tea.Msg) tea.Model {
 				m.Cursor = 0
 			}
 		case "d":
-			// remove selected choice from choices slice
-			m.Choices = append(m.Choices[:m.Cursor], m.Choices[m.Cursor+1:]...)
-			// move the cursor up once if it would dissapear
-			if m.Cursor == len(m.Choices) {
-				m.Cursor--
+
+			if len(m.Choices) > 0 {
+
+				// remove selected choice from choices slice
+				m.Choices = append(m.Choices[:m.Cursor], m.Choices[m.Cursor+1:]...)
+				// move the cursor up once if it would dissapear
+				if m.Cursor == len(m.Choices) {
+					m.Cursor--
+				}
+				delete(m.Selected, m.Cursor)
 			}
-			delete(m.Selected, m.Cursor)
 		case "enter", " ":
 			_, ok := m.Selected[m.Cursor]
 			if ok {
@@ -144,21 +155,28 @@ func updateList(m *model, msg tea.Msg) tea.Model {
 }
 
 func listView(m model) string {
-	s := "DO IT!\n\n"
+	s := "Tasks:\n\n"
 
 	for i, choice := range m.Choices {
-		cursor := "  "
+		cursor := ""
 
-		if m.Cursor == i {
-			cursor = "> "
-		}
-
-		cursor += choice
+		item := strconv.Itoa(i+1) + ". " + choice
 
 		if _, ok := m.Selected[i]; ok {
-			cursor += " x"
+			style := lipgloss.NewStyle().Strikethrough(true)
+			cursor += style.Render(item)
 		} else {
-			cursor += "  "
+			cursor += item
+		}
+
+		borderStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).PaddingRight(1).PaddingLeft(1)
+		activeStyle := borderStyle.Copy().BorderForeground(lipgloss.Color("86"))
+		inactiveStyle := borderStyle.Copy().BorderForeground(lipgloss.Color("12"))
+
+		if m.Cursor == i {
+			cursor = activeStyle.Render(cursor)
+		} else {
+			cursor = inactiveStyle.Render(cursor)
 		}
 
 		cursor += "\n"
@@ -170,7 +188,7 @@ func listView(m model) string {
 }
 
 func addView(m model) string {
-	return m.textInput.View()
+	return "What's the task?\n\n" + m.textInput.View()
 }
 
 func (m model) View() string {
