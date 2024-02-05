@@ -155,7 +155,7 @@ func updateList(m *model, msg tea.Msg) tea.Model {
 }
 
 func listView(m model) string {
-	s := "Tasks:\n\n"
+	s := "\nTasks:\n\n"
 
 	for i, choice := range m.Choices {
 		cursor := ""
@@ -184,11 +184,15 @@ func listView(m model) string {
 		s += cursor
 	}
 
+	footerStyle := lipgloss.NewStyle().PaddingTop(2).Foreground(lipgloss.Color("#474C66"))
+
+	s += footerStyle.Render("[a]dd, [d]elete")
+
 	return s
 }
 
 func addView(m model) string {
-	return "What's the task?\n\n" + m.textInput.View()
+	return "\nWhat's next?\n\n" + m.textInput.View()
 }
 
 func (m model) View() string {
@@ -245,7 +249,7 @@ func main() {
 	}()
 
 	db = ldb
-	p := tea.NewProgram(initialModel())
+	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v", err)
 		os.Exit(1)
